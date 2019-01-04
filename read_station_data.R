@@ -2,7 +2,11 @@ library(tidyverse)
 library(lubridate)
 library(readr)
 
-conflict_prefer("filter", "dplyr")
+conflicted::conflict_prefer("filter", "dplyr")
+
+PATH_WGET = '/usr/bin/wget'
+PATH_PYTHON = '~/miniconda2/envs/r-sf/bin/python'
+
 list_csv = list.files(pattern = glob2rx('Aforos*csv'))
 # Read all the stations
 
@@ -28,16 +32,16 @@ read_data <- function(i) {
                         1)))
   OUTNAME = sprintf('%s-%d.xls', lstac$Situación[i],
                     lstac$code[i])
-  COMMAND = sprintf('/Users/matteodefelice/miniconda2/bin/wget -c --no-check-certificate -O %s "%s"', 
-                    OUTNAME, URL)
+  COMMAND = sprintf('%s -c --no-check-certificate -O %s "%s"', 
+                    PATH_WGET, OUTNAME, URL)
   system(COMMAND)
   
   ####
   # temp = readLines(OUTNAME,-1)
   # writeLines(temp[-39],OUTNAME)
   
-  CONVERT_COMMAND = sprintf('/Users/matteodefelice/miniconda2/envs/cds/bin/python convert.py %s %s',
-                            OUTNAME, paste0(OUTNAME, '.csv'))
+  CONVERT_COMMAND = sprintf('%s convert.py %s %s',
+                            PATH_PYTHON, OUTNAME, paste0(OUTNAME, '.csv'))
   system(CONVERT_COMMAND)
   
   
@@ -53,7 +57,7 @@ read_data <- function(i) {
   return(return_df)
 }
 
-out = lapply(1:100, read_data) %>%
+out = lapply(1:2008, read_data) %>%
   bind_rows() 
 
 out %>% spread(parameter, value) %>% ggplot(aes(x = as.numeric(gsub("\\." ,"", `ETRS89 X`)), y = as.numeric(gsub("\\." ,"", `ETRS89 Y`)), color = Type)) + geom_point()
