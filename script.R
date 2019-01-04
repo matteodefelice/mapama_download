@@ -3,6 +3,10 @@ library(lubridate)
 library(readr)
 
 conflicted::conflict_prefer("filter", "dplyr")
+
+PATH_WGET = '/usr/bin/wget'
+PATH_PYTHON = '~/miniconda2/envs/r-sf/bin/python'
+
 list_csv = list.files(pattern = glob2rx('Aforos*csv'))
 # Read all the stations
 
@@ -36,12 +40,12 @@ read_data <- function(i) {
                   PARAMS[[k]]$STRING, lstac$code[i])
     OUTNAME = sprintf('%s-%d-%s.xls', lstac$Situación[i],
                       lstac$code[i], PARAMS[[k]]$name)
-    COMMAND = sprintf('/usr/bin/wget -c --no-check-certificate -O %s "%s"', 
-                      OUTNAME, URL)
+    COMMAND = sprintf('%s -c --no-check-certificate -O %s "%s"', 
+                      PATH_WGET, OUTNAME, URL)
     system(COMMAND)
     
-    CONVERT_COMMAND = sprintf('~/miniconda2/envs/r-sf/bin/python convert.py %s %s',
-                              OUTNAME, paste0(OUTNAME, '.csv'))
+    CONVERT_COMMAND = sprintf('%s convert.py %s %s',
+                              PATH_PYTHON, OUTNAME, paste0(OUTNAME, '.csv'))
     system(CONVERT_COMMAND)
     
     if (file.exists(paste0(OUTNAME, '.csv'))) {
@@ -93,3 +97,6 @@ out = lapply(1:500, read_data) %>%
 out2 = lapply(501:2008, read_data) %>%
   bind_rows() %>%
   filter(!is.na(value))
+
+total = bind_rows(out, out2) 
+write_rds(total, 'all_data.rds')
