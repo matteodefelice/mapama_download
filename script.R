@@ -2,7 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(readr)
 
-conflict_prefer("filter", "dplyr")
+conflicted::conflict_prefer("filter", "dplyr")
 list_csv = list.files(pattern = glob2rx('Aforos*csv'))
 # Read all the stations
 
@@ -12,6 +12,7 @@ lstac = lapply(list_csv, read_delim, delim = ';') %>%
   filter(Situación != 'Evaporimetrica')
 
 read_data <- function(i) {
+  print(i)
   if (lstac$Situación[i] == 'Embalse') {
     PARAMS = list(
       list(name = 'reserva', STRING = 'ROAN_EMB_DIARIO_RVA'),
@@ -35,11 +36,11 @@ read_data <- function(i) {
                   PARAMS[[k]]$STRING, lstac$code[i])
     OUTNAME = sprintf('%s-%d-%s.xls', lstac$Situación[i],
                       lstac$code[i], PARAMS[[k]]$name)
-    COMMAND = sprintf('/Users/matteodefelice/miniconda2/bin/wget -c --no-check-certificate -O %s "%s"', 
+    COMMAND = sprintf('/usr/bin/wget -c --no-check-certificate -O %s "%s"', 
                       OUTNAME, URL)
     system(COMMAND)
     
-    CONVERT_COMMAND = sprintf('/Users/matteodefelice/miniconda2/envs/cds/bin/python convert.py %s %s',
+    CONVERT_COMMAND = sprintf('~/miniconda2/envs/r-sf/bin/python convert.py %s %s',
                               OUTNAME, paste0(OUTNAME, '.csv'))
     system(CONVERT_COMMAND)
     
@@ -47,7 +48,12 @@ read_data <- function(i) {
       return_df[[k]] <- read_csv( paste0(OUTNAME, '.csv'), 
                                   col_types = cols(Día = col_integer()), 
                                   locale = locale(decimal_mark = ","), 
-                                  na = "-") %>%
+                                  na = "-") 
+      if ("Canal" %in% names(return_df[[k]])) {
+        return_df[[k]] = return_df[[k]] %>%
+          rename(Estación = Canal)
+      }
+      return_df[[k]] = return_df[[k]] %>%
         select(-X1) %>%
         gather(month, value, -Estación, -Año, -Día) %>%
         mutate(Type = lstac$Situación[i], varname = PARAMS[[k]]$name) %>%
@@ -80,6 +86,10 @@ read_data <- function(i) {
   return(bind_rows(return_df))
 }
 
-out = lapply(1:10, read_data) %>%
+out = lapply(1:500, read_data) %>%
+  bind_rows() %>%
+  filter(!is.na(value))
+
+out2 = lapply(501:2008, read_data) %>%
   bind_rows() %>%
   filter(!is.na(value))
