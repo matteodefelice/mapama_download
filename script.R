@@ -100,3 +100,7 @@ out2 = lapply(501:2008, read_data) %>%
 
 total = bind_rows(out, out2) 
 write_rds(total, 'all_data.rds')
+
+sum_stats = total %>% 
+  group_by(code, varname) %>% 
+  summarise(n())
